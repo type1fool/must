@@ -36,11 +36,6 @@ defimpl Must.Command, for: Any do
 end
 ```
 
-> ### Caution {: .warning}
-> 
-> Fallback implementations for `Must` are dangerous and intended only for prototyping or testing.
-> Be careful to avoid shipping fallback implementations in production.
-
 ## Event Persistence
 
 Several adapters are **planned** to support different persistence strategies:
