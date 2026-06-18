@@ -1,6 +1,6 @@
 defmodule Must do
   @moduledoc """
-  The primary interface for processing commands in `Must`.
+  The primary interface for processing changes in `Must`.
 
   ## Telemetry
 
@@ -8,43 +8,42 @@ defmodule Must do
 
   ### Metrics
 
-  - `must.command_processed.start`: The start time of command processing.
-  - `must.command_processed.stop`: The stop time of command processing.
-  - `must.command_processed.duration`: The total duration of command processing.
-  - `must.command_processed.exception`: The exception that occurred during command processing.
+  - `must.change_processed.start`: The start time of change processing.
+  - `must.change_processed.stop`: The stop time of change processing.
+  - `must.change_processed.duration`: The total duration of change processing.
+  - `must.change_processed.exception`: The exception that occurred during change processing.
   """
 
   @doc """
-  All-in-one command processing function.
+  All-in-one change processing function.
 
-  This is the recommended way to process a command.
+  This is the recommended way to process a change.
 
   ## Processing Flow
 
-  1. Authorize the command
-  2. Validate the command
-  3. Translate the command to an event
+  1. Validate the change
+  2. Authorize the change
+  3. Translate the change to an event
   4. Persist the event
   5. Handle the event
   6. Return the event
   """
-  def process_command(command, opts) do
-    metadata =
-      case command do
-        %{__struct__: struct} -> %{command: struct, opts: opts}
-        _ -> %{command: command, opts: opts}
-      end
+  def process_change!(change, opts) when is_struct(change) do
+    telemetry_metadata = %{change: inspect(change.__struct__), opts: opts}
 
-    :telemetry.span([:must, :command_processed], metadata, fn ->
-      event =
-        command
-        |> Must.Command.be_authorized!(opts)
-        |> Must.Command.be_valid!(opts)
-        |> Must.Command.be_translated_to_event!(opts)
-        |> Must.Event.be_persisted!(opts)
-        |> Must.Event.be_handled!(opts)
+    :telemetry.span([:must, :change_processed], telemetry_metadata, fn ->
+      events =
+        change
+        |> Must.Change.be_valid!(opts)
+        |> Must.Change.be_authorized!(opts)
+        |> Must.Change.be_translated_to_events!(opts)
+        |> Enum.map(fn event ->
+          event
+          |> Must.Event.be_persisted!(opts)
+          |> Must.Event.be_handled!(opts)
+        end)
 
-      {event, metadata}
+      {events, telemetry_metadata}
     end)
   end
 end

@@ -21,18 +21,18 @@ end
 
 ## Interface
 
-- `Must.process_command/2`: a unified function for processing a command.
-- `Must.Command`: an extensible protocol for **processing commands**.
+- `Must.process_change/2`: a unified function for processing a change.
+- `Must.Change`: an extensible protocol for **processing changes**.
 - `Must.Event`: an extensible protocol for **processing events**.
 - `Must.Storage`: a behaviour for **storing events**.
 
-When prototyping a system or testing `Must`'s fitness, it may be unnecessary to fully implement the `Must.Command` and `Must.Event` protocols. Both protocols have a `@fallback_to_any true` directive, so it is possible to define a fallback implementation using `Any`.
+When prototyping a system or testing `Must`'s fitness, it may be unnecessary to fully implement the `Must.Change` and `Must.Event` protocols. Both protocols have a `@fallback_to_any true` directive, so it is possible to define a fallback implementation using `Any`.
 
-For example, authorization may be bypassed by defining a fallback implementation that returns the command as-is:
+For example, authorization may be bypassed by defining a fallback implementation that returns the change as-is:
 
 ```elixir
-defimpl Must.Command, for: Any do
-  def be_authorized!(command, _opts), do: command
+defimpl Must.Change, for: Any do
+  def be_authorized!(change, _opts), do: change
 end
 ```
 
@@ -74,7 +74,7 @@ Many systems have a process for activating a user .
 
 ```elixir
 defmodule ActivateUser do
-  @moduledoc "Command for activating a user."
+  @moduledoc "Change for activating a user."
   use Ecto.Schema
 
   @primary_key false
@@ -82,35 +82,35 @@ defmodule ActivateUser do
     field :user_id, :integer
   end
 
-  def changeset(%__MODULE__{} = command, params) do
+  def changeset(%__MODULE__{} = change, params) do
     fields = __MODULE__.__schema__(:fields)
 
-    command
+    change
     |> Ecto.Changeset.cast(params, fields)
     |> Ecto.Changeset.validate_required(fields)
   end
 
-  defimpl Must.Command do
-    def be_authorized!(%__MODULE__{} = command, opts) do
+  defimpl Must.Change do
+    def be_authorized!(%__MODULE__{} = change, opts) do
       actor = Keyword.fetch!(opts, :actor)
-      actor.user_id != command.user_id
+      actor.user_id != change.user_id
       actor.organization.status == :active
       actor.organization.role in [:admin, :manager]
     end
 
-    def be_valid!(command, opts) do
+    def be_valid!(change, opts) do
       params = Keyword.fetch!(opts, :params)
 
-      command
+      change
       |> changeset(params)
       |> Ecto.Changeset.apply_action!(:validate)
     end
 
-    def be_translated_to_events!(command, opts) do
+    def be_translated_to_events!(change, opts) do
       metadata = Keyword.get(opts, :metadata, %{})
       
       [
-        %UserActivated{user_id: command.user_id, metadata: metadata}
+        %UserActivated{user_id: change.user_id, metadata: metadata}
       ]
     end
   end
@@ -119,26 +119,26 @@ end
 
 The example above demonstrates:
 
-- How to define a command struct and changeset
-- How to implement the `Must.Command` protocol
+- How to define a change struct and changeset
+- How to implement the `Must.Change` protocol
 
 > ### Colocation {: .info}
 > 
-> While `Must.Command` is implemented directly in the `ActivateUser` example, it is also possible to define implementations elsewhere. Having the command and its rules in one place may aid developers and LLMs to understand the behavior while minimizing context switching.
+> While `Must.Change` is implemented directly in the `ActivateUser` example, it is also possible to define implementations elsewhere. Having the change and its rules in one place may aid developers and LLMs to understand the behavior while minimizing context switching.
 >
 > However, this is not a requirement. Some teams may prefer to consolidate implementations into a separate module/file, for example.
 
-The simplest way to process a command is to use the `Must.process_command/2` function, which takes a command struct and a keyword list of options. The option keys are determined by the `Must.Command` implementation.
+The simplest way to process a change is to use the `Must.process_change/2` function, which takes a change struct and a keyword list of options. The option keys are determined by the `Must.Change` implementation.
 
 ```elixir
 %ActivateUser{}
-|> Must.process_command(
+|> Must.process_change(
   params: %{"user_id" => 123},
   metadata: %{"actor" => current_user}
 )
 ```
 
-If the command is processed successfully, a list of events will be returned:
+If the change is processed successfully, a list of events will be returned:
 
 ```elixir
 [
@@ -151,9 +151,9 @@ If the command is processed successfully, a list of events will be returned:
 
 ## Design Decisions
 
-To support a wide variety of use cases, the Must protocols may be implemented for structs or plain maps. For most systems, it is recommended to define commands as structs to provide clear intent to developers and coding tools. This approach also allows authorization, validation, and handling to be implemented close to the command definition. Readers can view a single file to understand the command definition and its behavior.
+To support a wide variety of use cases, the Must protocols may be implemented for structs or plain maps. For most systems, it is recommended to define changes as structs to provide clear intent to developers and coding tools. This approach also allows authorization, validation, and handling to be implemented close to the change definition. Readers can view a single file to understand the change definition and its behavior.
 
-For best results, return the command struct if all conditions are met, or raise an error if any conditions are not met
+For best results, return the change struct if all conditions are met, or raise an error if any conditions are not met
 
 Each protocol accepts two arguments: a struct/map and options. The protocol is intentionally agnostic about what data is passed as options. Some implementations may options as keyword lists, while others may use a struct/map. It is recommended to establish follow consistent patterns for each protocol implenentation to support effictient development and maintenance.
 

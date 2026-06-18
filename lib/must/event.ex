@@ -1,6 +1,6 @@
 defprotocol Must.Event do
   @moduledoc """
-  An extensible protocol for processing commands.
+  An extensible protocol for processing changes.
 
   > ### Pro Tip {: .info}
   > 
