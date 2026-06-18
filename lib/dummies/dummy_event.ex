@@ -5,7 +5,7 @@ defmodule Must.DummyEvent do
   defstruct []
 
   defimpl Must.Event do
-    def be_persisted!(event, _opts), do: event
+    def be_saved!(event, _opts), do: event
     def be_handled!(event, _opts), do: event
   end
 end

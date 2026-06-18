@@ -11,7 +11,7 @@ defprotocol Must.Event do
   @doc """
   Persist the event to a stream.
   """
-  def be_persisted!(event, opts)
+  def be_saved!(event, opts)
 
   @doc """
   Pass the event to any relevant handlers.

@@ -11,7 +11,7 @@ defmodule Must.EventStorage do
   @doc """
   Save an event to the log.
   """
-  @callback persist_event(event :: Must.Event.t(), metadata :: map()) :: :ok
+  @callback save_event(event :: Must.Event.t(), metadata :: map()) :: :ok
 
   @doc """
   Fetch events starting at a specified version.

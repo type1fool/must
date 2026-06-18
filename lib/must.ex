@@ -39,7 +39,7 @@ defmodule Must do
         |> Must.Change.be_translated_to_events!(opts)
         |> Enum.map(fn event ->
           event
-          |> Must.Event.be_persisted!(opts)
+          |> Must.Event.be_saved!(opts)
           |> Must.Event.be_handled!(opts)
         end)
 
