@@ -10,7 +10,8 @@ defmodule Must.MixProject do
       name: "Must",
       source_url: "https://github.com/type1fool/must",
       deps: deps(),
-      docs: docs()
+      docs: docs(),
+      package: package()
     ]
   end
 
@@ -34,6 +35,15 @@ defmodule Must.MixProject do
     [
       main: "Must",
       extras: ["README.md"]
+    ]
+  end
+
+  defp package do
+    [
+      name: :must,
+      description: "A simplified command processing library",
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/type1fool/must"}
     ]
   end
 end
