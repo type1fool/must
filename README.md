@@ -150,17 +150,18 @@ However, this is not a requirement. It is also possible to define implementation
 For product owners and subject matter experts engaged in a project, the following graph illustrates the patterns that will be followed during implementation.
 
 ```mermaid
-flowchart LR
-  UI@{shape: "rect", label: "UI/API"}
-  VALIDATE@{shape: "rect", label: "Validation"}
-  AUTHORIZE@{shape: "rect", label: "Authorization"}
-  CONVERT@{shape: "rect", label: "Conversion"}
-  SAVE@{shape: "rect", label: "Storage"}
-  HANDLE@{shape: "rect", label: "Integrations"}
+flowchart TD
+  UI@{shape: rect, label: "UI/API"}
+  VALIDATE@{shape: rect, label: "Validate"}
+  AUTHORIZE@{shape: rect, label: "Authorize"}
+  CONVERT@{shape: rect, label: "Convert"}
+  SAVE@{shape: rect, label: "Store"}
+  HANDLE@{shape: rect, label: "Integrate"}
 
-  UI -- change --> VALIDATE
+  UI -- change --> Must
 
-  subgraph
+  subgraph Must
+    direction LR
     VALIDATE --> AUTHORIZE
     AUTHORIZE --> CONVERT
     CONVERT --> SAVE
@@ -168,14 +169,14 @@ flowchart LR
   end
 ```
 
-| Term          | Description                                         | Examples                                          |
-| ------------- | --------------------------------------------------- | ------------------------------------------------- |
-| UI/API        | User interface / external requests                  | Web page, HTTP API, WebSocket API                 |
-| Validation    | Confirm data is acceptable                          | User activation includes an existing user ID      |
-| Authorization | Confirm user is permitted to make the change        | An organization admin activates a user            |
-| Conversion    | Transform change into event(s)                      | ActivateUser -> UserActivated                     |
-| Storage       | Save event(s) for audit/replay                      | Database or log file                              |
-| Integrations  | Pass event(s) to internal and external integrations | In-app alerts, email notifications, external APIs |
+| Term      | Description                                         | Examples                                          |
+| --------- | --------------------------------------------------- | ------------------------------------------------- |
+| UI/API    | User interface / external requests                  | Web page, HTTP API, WebSocket API                 |
+| Validate  | Confirm data is acceptable                          | User activation includes an existing user ID      |
+| Authorize | Confirm user is permitted to make the change        | An organization admin activates a user            |
+| Convert   | Transform change into event(s)                      | ActivateUser -> UserActivated                     |
+| Store     | Save event(s) for audit/replay                      | Database or log file                              |
+| Integrate | Pass event(s) to internal and external integrations | In-app alerts, email notifications, external APIs |
 
 🤔 Note that there is no mention of common Event Sourcing terms like aggregate, projection, event handler, etc. This is intentional to keep the design simple and to keep conversations focused on business requirements.
 
