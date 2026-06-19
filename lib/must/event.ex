@@ -4,7 +4,9 @@ defprotocol Must.Event do
 
   > ### Pro Tip {: .info}
   > 
-  > When defining implementations, use `Keyword.fetch!/2` or a custom opts struct to standardize option handling. This way, the Elixir 1.20+ compiler can perform compile-time checks on the options and raise errors during development.
+  > When defining implementations, use data structures and code which will raise errors when something is missing or invalid.
+  >
+  > This way, the Elixir 1.20+ compiler can perform compile-time checks on the options and raise errors during development.
   """
   @fallback_to_any true
 

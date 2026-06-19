@@ -51,9 +51,7 @@ defprotocol Must.Change do
   def be_valid!(change, params)
 
   @doc """
-  Translate the change to an event struct.
-
-  Returns a list of events resulting from a single change.
+  Translate the change into at least one event.
   """
-  def be_translated_to_events!(change, opts)
+  def be_events!(change, opts)
 end

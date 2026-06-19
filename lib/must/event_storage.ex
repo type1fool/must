@@ -16,5 +16,5 @@ defmodule Must.EventStorage do
   @doc """
   Fetch events starting at a specified version.
   """
-  @callback stream_events(version :: pos_integer()) :: Stream.t()
+  @callback stream_events(version :: pos_integer()) :: Enumerable.t()
 end

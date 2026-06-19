@@ -36,7 +36,7 @@ defmodule Must do
         change
         |> Must.Change.be_valid!(opts)
         |> Must.Change.be_authorized!(opts)
-        |> Must.Change.be_translated_to_events!(opts)
+        |> Must.Change.be_events!(opts)
         |> Enum.map(fn event ->
           event
           |> Must.Event.be_saved!(opts)

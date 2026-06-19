@@ -7,6 +7,6 @@ defmodule Must.DummyChange do
   defimpl Must.Change do
     def be_valid!(change, _opts), do: change
     def be_authorized!(change, _opts), do: change
-    def be_translated_to_events!(_change, _opts), do: []
+    def be_events!(_change, _opts), do: [%Must.DummyEvent{}]
   end
 end
