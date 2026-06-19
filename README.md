@@ -144,6 +144,41 @@ While the `Must.Change` protocol is implemented directly in the `ActivateUser` e
 
 However, this is not a requirement. It is also possible to define implementations elsewhere. Some teams may prefer to consolidate implementations into a separate module/file, for example.
 
+## Architecture
+
+`Must` is designed to be understood at a high level by engineers and interested non-technical stakeholders.
+For product owners and subject matter experts engaged in a project, the following graph illustrates the patterns that will be followed during implementation.
+
+```mermaid
+flowchart LR
+  UI@{shape: "rect", label: "UI/API"}
+  VALIDATE@{shape: "rect", label: "Validation"}
+  AUTHORIZE@{shape: "rect", label: "Authorization"}
+  CONVERT@{shape: "rect", label: "Conversion"}
+  SAVE@{shape: "rect", label: "Storage"}
+  HANDLE@{shape: "rect", label: "Integrations"}
+
+  UI -- change --> VALIDATE
+
+  subgraph
+    VALIDATE --> AUTHORIZE
+    AUTHORIZE --> CONVERT
+    CONVERT --> SAVE
+    SAVE --> HANDLE
+  end
+```
+
+| Term          | Description                                         | Examples                                          |
+| ------------- | --------------------------------------------------- | ------------------------------------------------- |
+| UI/API        | User interface / external requests                  | Web page, HTTP API, WebSocket API                 |
+| Validation    | Confirm data is acceptable                          | User activation includes an existing user ID      |
+| Authorization | Confirm user is permitted to make the change        | An organization admin activates a user            |
+| Conversion    | Transform change into event(s)                      | ActivateUser -> UserActivated                     |
+| Storage       | Save event(s) for audit/replay                      | Database or log file                              |
+| Integrations  | Pass event(s) to internal and external integrations | In-app alerts, email notifications, external APIs |
+
+🤔 Note that there is no mention of common Event Sourcing terms like aggregate, projection, event handler, etc. This is intentional to keep the design simple and to keep conversations focused on business requirements.
+
 ## Design Decisions
 
 To support a wide variety of use cases, the Must protocols may be implemented for structs. For most systems, it is recommended to define changes as Ecto embedded schemas to provide clear intent to developers and coding tools. This approach also allows authorization, validation, and handling to be implemented close to the change definition. Readers can view a single file to understand the change definition and its behavior.
