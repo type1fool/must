@@ -155,13 +155,13 @@ flowchart TD
   VALIDATE@{shape: rect, label: "Validate"}
   AUTHORIZE@{shape: rect, label: "Authorize"}
   CONVERT@{shape: rect, label: "Convert"}
-  SAVE@{shape: rect, label: "Store"}
+  SAVE@{shape: rect, label: "Save"}
   HANDLE@{shape: rect, label: "Integrate"}
 
   UI -- change --> Must
 
   subgraph Must
-    direction LR
+    direction TD
     VALIDATE --> AUTHORIZE
     AUTHORIZE --> CONVERT
     CONVERT --> SAVE
@@ -175,10 +175,11 @@ flowchart TD
 | Validate  | Confirm data is acceptable                          | User activation includes an existing user ID      |
 | Authorize | Confirm user is permitted to make the change        | An organization admin activates a user            |
 | Convert   | Transform change into event(s)                      | ActivateUser -> UserActivated                     |
-| Store     | Save event(s) for audit/replay                      | Database or log file                              |
+| Save      | Store event(s) for audit/replay                     | Database or log file                              |
 | Integrate | Pass event(s) to internal and external integrations | In-app alerts, email notifications, external APIs |
 
-🤔 Note that there is no mention of common Event Sourcing terms like aggregate, projection, event handler, etc. This is intentional to keep the design simple and to keep conversations focused on business requirements.
+🤔 Note that there is no mention of common Event Sourcing terms like aggregate, projection, event handler, side effect, etc.
+This is intended to keep the design simple and to keep conversations focused on business requirements.
 
 ## Design Decisions
 
