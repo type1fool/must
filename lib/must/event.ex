@@ -19,4 +19,9 @@ defprotocol Must.Event do
   Pass the event to any relevant handlers.
   """
   def be_handled!(event, opts)
+
+  @doc """
+  Standardize the event using the cloud event spec.
+  """
+  def be_standardized!(event, opts)
 end
