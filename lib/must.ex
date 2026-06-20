@@ -23,10 +23,16 @@ defmodule Must do
 
   1. Validate the change
   2. Authorize the change
-  3. Translate the change to an event
-  4. Persist the event
-  5. Handle the event
-  6. Return the event
+  3. Translate the change to events
+  4. Publish events to the event bus (if configured)
+  5. Return the events
+
+  ## Event Publishing
+
+  If `opts` includes an `:event_bus` key, each event is published to the
+  bus after production. The bus value can be an atom (named bus) or a pid.
+  Subscribers — including event stores and projections — handle persistence
+  and side effects asynchronously.
   """
   def process_change!(change, opts) when is_struct(change) do
     telemetry_metadata = %{change: inspect(change.__struct__), opts: opts}
@@ -37,13 +43,16 @@ defmodule Must do
         |> Must.Change.be_valid!(opts)
         |> Must.Change.be_authorized!(opts)
         |> Must.Change.be_events!(opts)
-        |> Enum.map(fn event ->
-          event
-          |> Must.Event.be_saved!(opts)
-          |> Must.Event.be_handled!(opts)
-        end)
+        |> tap(&publish_events(&1, opts))
 
       {events, telemetry_metadata}
     end)
+  end
+
+  defp publish_events(events, opts) do
+    case Keyword.get(opts, :event_bus) do
+      nil -> :ok
+      bus -> Enum.each(events, &Must.EventBus.publish(bus, &1))
+    end
   end
 end

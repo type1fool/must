@@ -23,12 +23,12 @@ end
 
 - `Must.process_change!/2`: a unified function for processing a change.
 - `Must.Change`: an extensible protocol for **processing changes**.
-- `Must.Event`: an extensible protocol for **responding to events**.
+- `Must.EventBus`: a GenStage producer for **broadcasting events to subscribers**.
 - `Must.EventStorage`: a behaviour for **storing events**.
 
 ### Fallback Implementations
 
-When prototyping a system or testing `Must`'s fitness, it may be unnecessary to fully implement the `Must.Change` protocol. Both protocols have a `@fallback_to_any true` directive, so it is possible to define a fallback implementation using `Any`.
+When prototyping a system or testing `Must`'s fitness, it may be unnecessary to implement `Must.Change` for every change type. The protocol has `@fallback_to_any true`, so a single fallback implementation covers all changes.
 
 For example, authorization may be bypassed by defining a fallback implementation that returns the change as-is:
 
@@ -40,9 +40,11 @@ end
 
 ⚠️ **WARNING**: Shipping production code with `Any` fallback implementations is not recommended. This is a useful option during development, but it can mask bugs and security issues when deployed.
 
-## Examples
+## Example
 
 Many systems have a process for activating a user. Here is an example of how to implement it using `Must`.
+
+Define a change struct with validation, authorization, and event production:
 
 ```elixir
 defmodule Acme.Identity.ActivateUser do
@@ -82,34 +84,23 @@ defmodule Acme.Identity.ActivateUser do
       |> changeset(params)
       |> Ecto.Changeset.apply_action!(:validate)
     end
+
+    def be_events!(change, _opts) do
+      [%UserActivated{user_id: change.user_id}]
+    end
   end
 end
 ```
+
+Define an event as a plain struct — no protocol needed:
 
 ```elixir
 defmodule Acme.Identity.UserActivated do
   defstruct [:user_id]
-
-  defimpl Must.Event do
-    def be_saved!(event, opts) do
-      metadata = Keyword.get(opts, :metadata, %{})
-      Acme.ChangeStore.save_change!(event, metadata)
-      event
-    end
-
-    def be_handled!(event, opts) do
-      # Update the `users` table, a projection, to mark the user as activated.
-      Acme.Identity.User.handle_event(event, opts)
-      user = Acme.Identity.get_user!(event.user_id)
-      # Send an activation email to the user.
-      Acme.Mailer.send_activation_email(user)
-      event
-    end
-  end
 end
 ```
 
-The simplest way to process a change is to use the `Must.process_change!/2` function, which takes a change struct and a keyword list of options. The option keys are determined by the `Must.Change` implementation.
+Process the change:
 
 ```elixir
 %ActivateUser{}
@@ -124,8 +115,7 @@ If the change is processed successfully, a list of events will be returned:
 ```elixir
 [
   %UserActivated{
-    user_id: 123,
-    metadata: %{"actor_id" => 1, "timestamp" => ~U[2026-01-01 01:00:00.123456Z]}
+    user_id: 123
   }
 ]
 ```
@@ -134,9 +124,9 @@ The example above demonstrates:
 
 - How to define a change struct and changeset
 - How to implement the `Must.Change` protocol
-- How to define an event struct
-- How to implement the `Must.Event` protocol
+- How to define an event struct (no protocol required)
 - How to process a change using `Must.process_change!/2`
+- Events are plain structs — persistence and side effects are handled by EventBus subscribers
 
 ### Colocation
 
@@ -155,8 +145,9 @@ flowchart TD
   VALIDATE@{shape: rect, label: "Validate"}
   AUTHORIZE@{shape: rect, label: "Authorize"}
   CONVERT@{shape: rect, label: "Convert"}
-  SAVE@{shape: rect, label: "Save"}
-  HANDLE@{shape: rect, label: "Integrate"}
+  PUBLISH@{shape: rect, label: "Publish"}
+  STORE@{shape: rect, label: "Store (subscriber)"}
+  HANDLE@{shape: rect, label: "Integrate (subscriber)"}
 
   UI -- change --> Must
 
@@ -164,9 +155,11 @@ flowchart TD
     direction TD
     VALIDATE --> AUTHORIZE
     AUTHORIZE --> CONVERT
-    CONVERT --> SAVE
-    SAVE --> HANDLE
+    CONVERT --> PUBLISH
   end
+
+  PUBLISH -.-> STORE
+  PUBLISH -.-> HANDLE
 ```
 
 | Term      | Description                                         | Examples                                          |
@@ -175,19 +168,19 @@ flowchart TD
 | Validate  | Confirm data is acceptable                          | User activation includes an existing user ID      |
 | Authorize | Confirm user is permitted to make the change        | An organization admin activates a user            |
 | Convert   | Transform change into event(s)                      | ActivateUser -> UserActivated                     |
-| Save      | Store event(s) for audit/replay                     | Database or log file                              |
-| Integrate | Pass event(s) to internal and external integrations | In-app alerts, email notifications, external APIs |
+| Publish   | Emit events to the EventBus for subscribers         | GenStage producer fan-out                         |
+| Store     | Persist events (subscriber concern)                 | SQLite, PostgreSQL, Kafka                         |
+| Integrate | Side effects and projections (subscriber concern)   | Emails, materialized views, webhooks              |
 
-🤔 Note that there is no mention of common Event Sourcing terms like aggregate, projection, event handler, side effect, etc.
-This is intended to keep the design simple and to keep conversations focused on business requirements.
+🤔 Note that common Event Sourcing terms like aggregate, projection, and process manager are absent from `Must`'s core. The pipeline handles validation, authorization, and event production; everything else is a subscriber.
 
 ## Design Decisions
 
-To support a wide variety of use cases, the Must protocols may be implemented for structs. For most systems, it is recommended to define changes as Ecto embedded schemas to provide clear intent to developers and coding tools. This approach also allows authorization, validation, and handling to be implemented close to the change definition. Readers can view a single file to understand the change definition and its behavior.
+To support a wide variety of use cases, the `Must.Change` protocol may be implemented for structs. For most systems, it is recommended to define changes as Ecto embedded schemas to provide clear intent to developers and coding tools. This approach also allows validation, authorization, and event production to be colocated with the change definition. Readers can view a single file to understand the change definition and its behavior.
+
+Events are plain structs with no required protocol. They flow through the EventBus to subscribers for persistence and side effects. This keeps the change pipeline synchronous and predictable while allowing asynchronous, fault-tolerant event processing via subscriber pipelines (GenStage, Broadway, etc.).
 
 For best results, return change & event structs if all conditions are met, or raise an error if any conditions are not met.
-
-Each protocol accepts two arguments: a struct and options. The protocol is intentionally agnostic about what data is passed as options. Some applications may use options as keyword lists, while others may use a map or struct. It is recommended to establish follow consistent patterns for each protocol implenentation to support effictient development and maintenance.
 
 ## Event Persistence
 
@@ -213,10 +206,13 @@ Each adapter will need to:
 
 ## Event Delivery
 
-Several delivery mechanisms are **planned** to support different event delivery strategies:
+Events are delivered via `Must.EventBus`, a GenStage producer that broadcasts events to all subscribers with backpressure.
+
+- [x] [GenStage](https://hex.pm/packages/gen_stage)
+
+Additional delivery mechanisms are **planned** for environments where GenStage is not appropriate:
 
 - [ ] [Phoenix PubSub](https://hex.pm/packages/phoenix_pubsub)
-- [ ] [GenStage](https://hex.pm/packages/gen_stage)
 - [ ] [Kafka](https://kafka.apache.org/)
 - [ ] [RabbitMQ](https://www.rabbitmq.com/)
 - [ ] [WebSockets](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)

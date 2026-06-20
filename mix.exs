@@ -29,6 +29,7 @@ defmodule Must.MixProject do
       {:ecto, "~> 3.14"},
       {:ecto_sql, "~> 3.14"},
       {:ecto_sqlite3, "~> 0.24"},
+      {:gen_stage, "~> 1.2", optional: true},
       {:jason, "~> 1.4"},
       {:ex_doc, "~> 0.40.3", only: :dev, runtime: false, warn_if_outdated: true},
       {:telemetry, "~> 1.4"}
@@ -41,7 +42,7 @@ defmodule Must.MixProject do
   defp docs do
     [
       main: "Must",
-      extras: ["README.md"]
+      extras: ["README.md", "guides/*.md"]
     ]
   end
 
